@@ -2,7 +2,7 @@
   "name": "Fasting Tracker",
   "short_name": "Fasting",
   "description": "24時間ファスティング記録トラッカー",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
