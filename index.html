@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fasting">
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Fasting Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#0d1117;color:#e6edf3;
+  font-family:-apple-system,'Helvetica Neue','Hiragino Sans',sans-serif;
+  user-select:none;-webkit-user-select:none}
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;
+  padding-top:env(safe-area-inset-top);overflow:hidden}
+
+.header{z-index:10;background:#0d1117;padding:10px 0 0;border-bottom:1px solid #21262d;flex-shrink:0}
+.title-row{display:flex;justify-content:space-between;align-items:center;padding:0 12px 6px}
+.title{font-size:17px;font-weight:700;letter-spacing:.02em}
+.header-right{display:flex;align-items:center;gap:8px}
+.badge{display:flex;align-items:baseline;gap:4px;
+  background:linear-gradient(135deg,#00d2b4,#00a896);border-radius:20px;padding:3px 12px}
+.badge-num{font-size:20px;font-weight:800;color:#0d1117;line-height:1}
+.badge-lbl{font-size:9px;font-weight:600;color:#0d1117;text-transform:uppercase;letter-spacing:.05em}
+.exit-btn{background:none;border:1px solid #30363d;color:#f85149;font-size:11px;font-weight:600;
+  padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.exit-btn:active{background:#f8514922}
+
+.nav{display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 12px 6px}
+.nav-btn{background:none;border:none;color:#58a6ff;font-size:15px;cursor:pointer;padding:4px 8px;border-radius:6px}
+.nav-btn:active{background:#58a6ff22}
+.week-lbl{font-size:13px;font-weight:600;color:#c9d1d9;min-width:110px;text-align:center}
+.today-btn{background:none;border:1px solid #30363d;color:#58a6ff;font-size:10px;font-weight:600;
+  padding:3px 8px;border-radius:6px;cursor:pointer}
+.today-btn:active{background:#58a6ff22}
+
+.dh-row{display:flex;padding:4px 0 6px}
+.time-spacer{min-width:30px;max-width:30px;flex-shrink:0}
+.clip{flex:1;overflow:hidden}
+.strip{display:flex;will-change:transform}
+.dh{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0}
+.dn{font-size:10px;color:#8b949e;font-weight:500}
+.dd{font-size:12px;font-weight:600;color:#c9d1d9;width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;border-radius:50%}
+.dd.today{background:#58a6ff;color:#0d1117;font-weight:700}
+
+.grid-outer{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:44px}
+.grid-inner{display:flex}
+.time-col{min-width:30px;max-width:30px;flex-shrink:0}
+.tl{height:34px;display:flex;align-items:center;justify-content:center}
+.th{font-size:11px;color:#9eabb8;font-weight:700;font-variant-numeric:tabular-nums}
+.tm{font-size:9px;color:#5d6872;font-weight:600}
+
+.day-col{flex-shrink:0}
+.cell{height:34px;display:flex;align-items:center;justify-content:center;
+  border-right:1px solid #1c2028;border-bottom:1px solid #1c2028}
+.cell.we{background:rgba(255,255,255,.018)}
+.cell.fast{background:rgba(0,210,180,.13);border-bottom-color:rgba(0,210,180,.08)}
+.cell.meal{background:rgba(255,140,66,.24)}
+.cell.snack{background:rgba(255,209,102,.20)}
+.cell.now{box-shadow:inset 0 0 0 2px #58a6ff}
+.icon-meal{font-size:15px;font-weight:700;color:#ff8c42}
+.icon-snack{font-size:13px;font-weight:600;color:#ffd166}
+
+.legend{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:14px;
+  padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));
+  background:linear-gradient(transparent,#0d1117 30%);z-index:10;max-width:480px;margin:0 auto}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#8b949e}
+.legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;
+  display:flex;align-items:center;justify-content:center}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:24px;
+  max-width:320px;width:90%;text-align:center}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.modal p{font-size:13px;color:#8b949e;margin-bottom:16px;line-height:1.5}
+.modal-btns{display:flex;gap:10px;justify-content:center}
+.modal-btn{flex:1;padding:10px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer}
+.modal-btn.pri{background:#58a6ff;color:#0d1117}
+.modal-btn.sec{background:#21262d;color:#c9d1d9}
+.modal-btn:active{opacity:.8}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="title-row">
+      <span class="title">Fasting Tracker</span>
+      <div class="header-right">
+        <div class="badge">
+          <span class="badge-num" id="fastCount">0</span>
+          <span class="badge-lbl">fasts</span>
+        </div>
+        <button class="exit-btn" id="exitBtn">終了</button>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn" id="prevDay">◀</button>
+      <span class="week-lbl" id="weekLabel"></span>
+      <button class="nav-btn" id="nextDay">▶</button>
+      <button class="today-btn" id="todayBtn">今日</button>
+    </div>
+    <div class="dh-row">
+      <div class="time-spacer"></div>
+      <div class="clip"><div class="strip" id="hdrStrip"></div></div>
+    </div>
+  </div>
+  <div class="grid-outer" id="gridOuter">
+    <div class="grid-inner">
+      <div class="time-col" id="timeCol"></div>
+      <div class="clip"><div class="strip" id="cellStrip"></div></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-dot" style="background:#ff8c42"></span>◯食事</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#ffd166"></span>△間食</span>
+    <span class="legend-item"><span class="legend-dot" style="background:rgba(0,210,180,.35)"></span>断食中</span>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="exitModal">
+  <div class="modal">
+    <h3>データを保存して終了</h3>
+    <p>記録をJSONファイルにダウンロード保存します。<br>次回起動時に自動で復元できます。</p>
+    <div class="modal-btns">
+      <button class="modal-btn sec" id="exitCancel">キャンセル</button>
+      <button class="modal-btn pri" id="exitConfirm">保存して終了</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg hidden" id="importModal">
+  <div class="modal">
+    <h3>データの復元</h3>
+    <p>ローカルに記録がありません。<br>前回の保存ファイルから復元しますか？</p>
+    <div class="modal-btns">
+      <button class="modal-btn sec" id="importSkip">新規開始</button>
+      <button class="modal-btn pri" id="importLoad">ファイルを選択</button>
+    </div>
+  </div>
+</div>
+<input type="file" accept=".json" id="filePicker" style="display:none">
+
+<script>
+/* ===== Constants ===== */
+const SLOTS=48,THRESHOLD=24,VISIBLE=7,BUFFER=21,ROW_H=34,TIME_W=30;
+const STATES=[null,"meal","snack"],DSP={meal:"◯",snack:"△"};
+const DOW=["日","月","火","水","木","金","土"];
+const EXPORT_FILE="fasting-tracker-data.json";
+
+/* ===== State ===== */
+let data={},anchor=0;
+let colW=50,pxOff=0,rafId=null;
+let touchState=null;
+
+/* ===== Util ===== */
+const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const addD=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r};
+const homePx=()=>7*colW;
+
+/* ===== DOM refs ===== */
+const $=id=>document.getElementById(id);
+let hdrStrip,cellStrip,gridOuter;
+
+/* ===== Storage ===== */
+function loadLocal(){try{const s=localStorage.getItem("fasting-data");if(s)data=JSON.parse(s)}catch(e){}}
+function saveLocal(){try{localStorage.setItem("fasting-data",JSON.stringify(data))}catch(e){}}
+
+/* ===== Export / Import ===== */
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=EXPORT_FILE;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function importFromFile(){
+  return new Promise(resolve=>{
+    const input=$("filePicker");input.value="";
+    input.onchange=()=>{
+      const file=input.files[0];if(!file){resolve(false);return}
+      const reader=new FileReader();
+      reader.onload=()=>{
+        try{const p=JSON.parse(reader.result);if(typeof p==="object"&&p!==null){data=p;saveLocal();resolve(true)}else resolve(false)}
+        catch(e){alert("ファイルを読み込めませんでした");resolve(false)}
+      };reader.readAsText(file);
+    };input.click();
+  });
+}
+
+/* ===== Buffer dates ===== */
+function getBufferDates(){
+  const end=addD(new Date(),anchor);
+  return Array.from({length:BUFFER},(_,i)=>addD(end,i-(VISIBLE-1)-7));
+}
+
+/* ===== Fasting calc ===== */
+function calcFasting(){
+  const ev=[];
+  for(const ds of Object.keys(data).sort()){
+    const dd=data[ds];if(!dd)continue;
+    for(let s=0;s<SLOTS;s++)if(dd[s]==="meal"||dd[s]==="snack")ev.push({ds,s});
+  }
+  const fs=new Set(),fp=[];
+  for(let i=0;i<ev.length-1;i++){
+    const a=ev[i],b=ev[i+1];
+    const gap=Math.round((new Date(b.ds)-new Date(a.ds))/864e5)*SLOTS+(b.s-a.s);
+    if(gap>=THRESHOLD){
+      let cd=new Date(a.ds),cs=a.s+1;
+      if(cs>=SLOTS){cs=0;cd=addD(cd,1)}
+      const ed=new Date(b.ds),es=b.s;
+      const st=new Set();
+      while(cd<ed||(cd.getTime()===ed.getTime()&&cs<es)){
+        const k=fmt(cd);fs.add(`${k}:${cs}`);st.add(k);
+        cs++;if(cs>=SLOTS){cs=0;cd=addD(cd,1)}
+      }
+      fp.push(st);
+    }
+  }
+  return{fastSet:fs,fastPeriods:fp};
+}
+
+function getVisibleDates(){
+  const hp=homePx();
+  const shift=Math.round((pxOff-hp)/colW);
+  const end=addD(new Date(),anchor-shift);
+  return Array.from({length:VISIBLE},(_,i)=>addD(end,i-(VISIBLE-1)));
+}
+
+function countFasts(fastPeriods){
+  const vis=new Set(getVisibleDates().map(fmt));
+  return fastPeriods.filter(ds=>{for(const d of ds)if(vis.has(d))return true;return false}).length;
+}
+
+/* ===== Transform ===== */
+function applyTx(v){
+  const s=`translateX(${-v}px)`;
+  if(hdrStrip)hdrStrip.style.transform=s;
+  if(cellStrip)cellStrip.style.transform=s;
+}
+
+/* ===== Animation ===== */
+function animateTo(target,cb){
+  if(rafId)cancelAnimationFrame(rafId);
+  const step=()=>{
+    const d=target-pxOff;
+    if(Math.abs(d)<0.5){pxOff=target;applyTx(target);updateLabel();if(cb)cb();return}
+    pxOff+=d*0.22;applyTx(pxOff);
+    rafId=requestAnimationFrame(step);
+  };
+  rafId=requestAnimationFrame(step);
+}
+
+function snapToDay(){
+  const hp=homePx(),shift=Math.round((pxOff-hp)/colW);
+  animateTo(hp+shift*colW,()=>{
+    const s2=Math.round((pxOff-homePx())/colW);
+    if(Math.abs(s2)>4){anchor-=s2;rebuild()}
+    updateLabel();
+  });
+}
+
+function doMomentum(vel){
+  if(rafId)cancelAnimationFrame(rafId);
+  let v=vel,last=performance.now();
+  const step=now=>{
+    const dt=Math.min(now-last,32);last=now;
+    v*=Math.pow(0.94,dt/16);
+    pxOff+=v*dt;applyTx(pxOff);
+    if(Math.abs(v)>0.015)rafId=requestAnimationFrame(step);
+    else snapToDay();
+  };
+  Math.abs(v)>0.015?(rafId=requestAnimationFrame(step)):snapToDay();
+}
+
+/* ===== Touch (non-passive) ===== */
+function initTouch(){
+  const el=gridOuter;
+  el.addEventListener("touchstart",e=>{
+    if(rafId)cancelAnimationFrame(rafId);
+    const p=e.touches[0];
+    touchState={sx:p.clientX,sy:p.clientY,px0:pxOff,dir:null,lx:p.clientX,lt:performance.now(),vx:0};
+  },{passive:true});
+
+  el.addEventListener("touchmove",e=>{
+    if(!touchState)return;
+    const p=e.touches[0],dx=p.clientX-touchState.sx,dy=p.clientY-touchState.sy;
+    if(touchState.dir===null){
+      if(Math.abs(dx)>6||Math.abs(dy)>6)touchState.dir=Math.abs(dx)>Math.abs(dy)?"h":"v";
+      else return;
+    }
+    if(touchState.dir==="v")return;
+    e.preventDefault();
+    pxOff=touchState.px0-dx;applyTx(pxOff);
+    const now=performance.now();
+    touchState.vx=(touchState.lx-p.clientX)/Math.max(1,now-touchState.lt);
+    touchState.lx=p.clientX;touchState.lt=now;
+  },{passive:false});
+
+  el.addEventListener("touchend",()=>{
+    if(!touchState)return;
+    const dir=touchState.dir,v=touchState.vx||0;
+    touchState=null;
+    if(dir==="h"){Math.abs(v)>0.12?doMomentum(v):snapToDay()}
+  },{passive:true});
+}
+
+/* ===== Build DOM ===== */
+function measureColW(){
+  const w=$("app").offsetWidth;
+  if(w)colW=(w-TIME_W)/VISIBLE;
+}
+
+function rebuild(){
+  const dates=getBufferDates();
+  const{fastSet,fastPeriods}=calcFasting();
+  const todayStr=fmt(new Date()),now=new Date();
+  const nowSlot=now.getHours()*2+(now.getMinutes()>=30?1:0);
+
+  // Header strip
+  hdrStrip=$("hdrStrip");hdrStrip.innerHTML="";
+  dates.forEach(d=>{
+    const div=document.createElement("div");div.className="dh";
+    div.style.width=div.style.minWidth=colW+"px";
+    const isT=fmt(d)===todayStr;
+    div.innerHTML=`<span class="dn">${DOW[d.getDay()]}</span><span class="dd${isT?" today":""}">${d.getDate()}</span>`;
+    hdrStrip.appendChild(div);
+  });
+
+  // Time col
+  const tc=$("timeCol");tc.innerHTML="";
+  for(let si=0;si<SLOTS;si++){
+    const div=document.createElement("div");div.className="tl";
+    div.innerHTML=si%2===0?`<span class="th">${String(Math.floor(si/2)).padStart(2,"0")}</span>`:`<span class="tm">30</span>`;
+    tc.appendChild(div);
+  }
+
+  // Cell strip
+  cellStrip=$("cellStrip");cellStrip.innerHTML="";
+  dates.forEach(d=>{
+    const ds=fmt(d),dow=d.getDay(),isWe=dow===0||dow===6;
+    const col=document.createElement("div");col.className="day-col";
+    col.style.width=col.style.minWidth=colW+"px";
+    for(let si=0;si<SLOTS;si++){
+      const val=data[ds]?.[si]||null;
+      const isFast=fastSet.has(`${ds}:${si}`);
+      const isNow=ds===todayStr&&si===nowSlot;
+      const cell=document.createElement("div");
+      let cls="cell";
+      if(isWe)cls+=" we";
+      if(isFast)cls+=" fast";
+      if(val==="meal")cls+=" meal";
+      if(val==="snack")cls+=" snack";
+      if(isNow)cls+=" now";
+      cell.className=cls;
+      if(val&&DSP[val]){
+        const sp=document.createElement("span");
+        sp.className=val==="meal"?"icon-meal":"icon-snack";
+        sp.textContent=DSP[val];cell.appendChild(sp);
+      }
+      cell.addEventListener("click",()=>{
+        if(!data[ds])data[ds]=new Array(SLOTS).fill(null);
+        else data[ds]=[...data[ds]];
+        const cur=data[ds][si];data[ds][si]=STATES[(STATES.indexOf(cur)+1)%STATES.length];
+        if(data[ds].every(v=>v===null))delete data[ds];
+        saveLocal();rebuild();
+      });
+      col.appendChild(cell);
+    }
+    cellStrip.appendChild(col);
+  });
+
+  // Reset transform
+  pxOff=homePx();applyTx(pxOff);
+  updateLabel();
+}
+
+function updateLabel(){
+  const vd=getVisibleDates();
+  const{fastPeriods}=calcFasting();
+  $("fastCount").textContent=countFasts(fastPeriods);
+  const s=vd[0],e=vd[6];
+  $("weekLabel").textContent=s.getMonth()===e.getMonth()
+    ?`${s.getMonth()+1}/${s.getDate()} – ${e.getDate()}`
+    :`${s.getMonth()+1}/${s.getDate()} – ${e.getMonth()+1}/${e.getDate()}`;
+}
+
+/* ===== Nav ===== */
+function shiftDays(n){
+  if(rafId)cancelAnimationFrame(rafId);
+  animateTo(pxOff+n*colW,()=>{
+    const s=Math.round((pxOff-homePx())/colW);
+    if(Math.abs(s)>4){anchor-=s;rebuild()}
+    updateLabel();
+  });
+}
+
+/* ===== Exit flow ===== */
+$("exitBtn").addEventListener("click",()=>$("exitModal").classList.remove("hidden"));
+$("exitCancel").addEventListener("click",()=>$("exitModal").classList.add("hidden"));
+$("exitConfirm").addEventListener("click",()=>{
+  saveLocal();exportData();
+  $("exitModal").classList.add("hidden");
+  setTimeout(()=>{
+    window.close();
+    $("app").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#8b949e;font-size:14px;text-align:center;padding:20px;line-height:1.6">データを保存しました。<br>このタブを閉じてください。</div>';
+  },600);
+});
+
+/* ===== Import flow ===== */
+$("importSkip").addEventListener("click",()=>$("importModal").classList.add("hidden"));
+$("importLoad").addEventListener("click",async()=>{
+  $("importModal").classList.add("hidden");
+  if(await importFromFile())rebuild();
+});
+
+/* ===== Startup ===== */
+function startup(){
+  gridOuter=$("gridOuter");
+  hdrStrip=$("hdrStrip");cellStrip=$("cellStrip");
+  loadLocal();
+  measureColW();
+  if(Object.keys(data).length===0)$("importModal").classList.remove("hidden");
+  rebuild();
+  initTouch();
+  // Scroll to current time
+  const now=new Date(),slot=now.getHours()*2+(now.getMinutes()>=30?1:0);
+  gridOuter.scrollTop=Math.max(0,slot-4)*ROW_H;
+  // Resize
+  window.addEventListener("resize",()=>{measureColW();rebuild()});
+}
+
+$("prevDay").addEventListener("click",()=>shiftDays(1));
+$("nextDay").addEventListener("click",()=>shiftDays(-1));
+$("todayBtn").addEventListener("click",()=>{
+  if(rafId)cancelAnimationFrame(rafId);
+  anchor=0;rebuild();
+});
+
+startup();
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
