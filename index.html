@@ -226,7 +226,7 @@ function calcFasting(){
 function getVisibleDates(){
   const hp=homePx();
   const shift=Math.round((pxOff-hp)/colW);
-  const end=addD(new Date(),anchor-shift);
+  const end=addD(new Date(),anchor+shift);
   return Array.from({length:VISIBLE},(_,i)=>addD(end,i-(VISIBLE-1)));
 }
 
@@ -258,7 +258,7 @@ function snapToDay(){
   const hp=homePx(),shift=Math.round((pxOff-hp)/colW);
   animateTo(hp+shift*colW,()=>{
     const s2=Math.round((pxOff-homePx())/colW);
-    if(Math.abs(s2)>4){anchor-=s2;rebuild()}
+    if(Math.abs(s2)>4){anchor+=s2;rebuild()}
     updateLabel();
   });
 }
@@ -393,7 +393,7 @@ function shiftDays(n){
   if(rafId)cancelAnimationFrame(rafId);
   animateTo(pxOff+n*colW,()=>{
     const s=Math.round((pxOff-homePx())/colW);
-    if(Math.abs(s)>4){anchor-=s;rebuild()}
+    if(Math.abs(s)>4){anchor+=s;rebuild()}
     updateLabel();
   });
 }
@@ -433,8 +433,8 @@ function startup(){
   window.addEventListener("resize",()=>{measureColW();rebuild()});
 }
 
-$("prevDay").addEventListener("click",()=>shiftDays(1));
-$("nextDay").addEventListener("click",()=>shiftDays(-1));
+$("prevDay").addEventListener("click",()=>shiftDays(-1));
+$("nextDay").addEventListener("click",()=>shiftDays(1));
 $("todayBtn").addEventListener("click",()=>{
   if(rafId)cancelAnimationFrame(rafId);
   anchor=0;rebuild();
