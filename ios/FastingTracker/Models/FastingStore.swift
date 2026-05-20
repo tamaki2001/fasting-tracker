@@ -92,6 +92,12 @@ final class FastingStore {
         var newFastSet = Set<String>()
         var newPeriods: [Set<String>] = []
 
+        guard events.count > 1 else {
+            fastSet = newFastSet
+            fastPeriods = newPeriods
+            return
+        }
+
         for i in 0..<(events.count - 1) {
             let a = events[i], b = events[i + 1]
             guard
