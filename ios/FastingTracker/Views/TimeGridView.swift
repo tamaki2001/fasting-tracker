@@ -21,9 +21,10 @@ struct TimeGridView: View {
     @State private var dragStartOffset: CGFloat = 0
     @State private var dragAxis: DragAxis = .undetermined
 
-    // Column width: UIScreen で初期値を設定し、onGeometryChange で正確な値に更新
-    // GeometryReader を body のレイアウトに使わないことでギャップ問題を回避する
-    @State private var colW: CGFloat = (UIScreen.main.bounds.width - timeWidth) / CGFloat(visibleCount)
+    // Column width: 安全な初期値 50 を使い、onGeometryChange で正確な値に更新する。
+    // UIScreen.main.bounds.width は SwiftUI 初期化時に 0 を返すことがあり、
+    // (0 - 30) / 7 = -4.3 のような負値になると全フレームが無効になるため使わない。
+    @State private var colW: CGFloat = 50
 
     // Current time — refreshed every minute for the "now" indicator
     @State private var nowSlot: Int = currentNowSlot()
@@ -61,8 +62,10 @@ struct TimeGridView: View {
         }
         // 幅の測定は onGeometryChange（iOS 17）で行う（レイアウトに影響しない）
         .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { newWidth in
+            // 幅が有効な正の値のときだけ更新（0 や負値はスキップ）
+            guard newWidth > timeWidth else { return }
             let newColW = (newWidth - timeWidth) / CGFloat(visibleCount)
-            guard abs(newColW - colW) > 0.5 else { return }
+            guard newColW > 0, abs(newColW - colW) > 0.5 else { return }
             colW = newColW
             pixelOffset = homeOffset
         }
