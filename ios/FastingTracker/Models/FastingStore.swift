@@ -45,7 +45,7 @@ final class FastingStore {
 
     init() {
         fastingHours = UserDefaults.standard.integer(forKey: "fasting-hours")
-            .clamped(to: 10...24) // 0 が返ったときのデフォルト
+            .clamped(to: 10...36) // 0 が返ったときのデフォルト
         if fastingHours == 0 { fastingHours = 12 }
         load()
         recomputeFasting()

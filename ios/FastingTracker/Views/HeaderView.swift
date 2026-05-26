@@ -134,7 +134,7 @@ private struct SettingsSheet: View {
     @Environment(FastingStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    private let hourOptions = [10, 11, 12, 13, 14, 15, 16, 17, 18, 20]
+    private let hourOptions = Array(10...36)
 
     var body: some View {
         @Bindable var store = store
