@@ -21,8 +21,9 @@ struct TimeGridView: View {
     @State private var dragStartOffset: CGFloat = 0
     @State private var dragAxis: DragAxis = .undetermined
 
-    // Column width — measured from GeometryReader
-    @State private var colW: CGFloat = 50
+    // Column width: UIScreen で初期値を設定し、onGeometryChange で正確な値に更新
+    // GeometryReader を body のレイアウトに使わないことでギャップ問題を回避する
+    @State private var colW: CGFloat = (UIScreen.main.bounds.width - timeWidth) / CGFloat(visibleCount)
 
     // Current time — refreshed every minute for the "now" indicator
     @State private var nowSlot: Int = currentNowSlot()
@@ -41,7 +42,7 @@ struct TimeGridView: View {
         }
     }
 
-    // The 7 dates currently visible (used for header label and fast count)
+    // The 7 dates currently visible
     private var visibleDates: [Date] {
         let shift = Int(((pixelOffset - homeOffset) / colW).rounded())
         let cal = Calendar.current
@@ -51,31 +52,28 @@ struct TimeGridView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let cw = (geo.size.width - timeWidth) / CGFloat(visibleCount)
-
-            VStack(spacing: 0) {
-                dayHeaderStrip(colW: cw)
-                Divider().background(Color(white: 0.13))
-                mainGrid(colW: cw)
-            }
-            // GeometryReader 内の VStack は明示的にフレームを指定しないと
-            // 自然サイズで配置されてしまい、レイアウトが崩れる
-            .frame(width: geo.size.width, height: geo.size.height)
-            .onAppear {
-                colW = cw
-                pixelOffset = homeOffset
-                todayStr = store.dateString(Date())
-                onVisibleDatesChange(visibleDates)
-            }
-            .onChange(of: cw) {
-                colW = cw
-                pixelOffset = homeOffset
-            }
-            .onChange(of: anchorDayOffset) {
-                pixelOffset = homeOffset
-                onVisibleDatesChange(visibleDates)
-            }
+        // GeometryReader をレイアウトに使わず、VStack を直接配置する
+        // これにより dayHeaderStrip が必ずヘッダー直下に来る
+        VStack(spacing: 0) {
+            dayHeaderStrip
+            Divider().background(Color(white: 0.13))
+            mainGrid
+        }
+        // 幅の測定は onGeometryChange（iOS 17）で行う（レイアウトに影響しない）
+        .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { newWidth in
+            let newColW = (newWidth - timeWidth) / CGFloat(visibleCount)
+            guard abs(newColW - colW) > 0.5 else { return }
+            colW = newColW
+            pixelOffset = homeOffset
+        }
+        .onAppear {
+            pixelOffset = homeOffset
+            todayStr = store.dateString(Date())
+            onVisibleDatesChange(visibleDates)
+        }
+        .onChange(of: anchorDayOffset) {
+            pixelOffset = homeOffset
+            onVisibleDatesChange(visibleDates)
         }
         .onReceive(minuteTimer) { _ in
             nowSlot = Self.currentNowSlot()
@@ -84,11 +82,12 @@ struct TimeGridView: View {
         .gesture(horizontalDragGesture)
     }
 
-    // MARK: - Day header strip (scrolls horizontally with grid)
+    // MARK: - Day header strip
 
-    private func dayHeaderStrip(colW: CGFloat) -> some View {
+    // ZStack に maxWidth: .infinity を指定して「21列分の幅」を親に報告させない
+    private var dayHeaderStrip: some View {
         HStack(spacing: 0) {
-            Color.clear.frame(width: timeWidth)
+            Color.clear.frame(width: timeWidth, height: 46)
             ZStack(alignment: .leading) {
                 HStack(spacing: 0) {
                     ForEach(bufferDates, id: \.self) { date in
@@ -97,29 +96,27 @@ struct TimeGridView: View {
                 }
                 .offset(x: -pixelOffset)
             }
-            // ZStack はデフォルトで内部コンテンツ（21列分）の幅を報告するため
-            // 親レイアウトが崩れる。maxWidth: .infinity で利用可能幅に制限する。
             .frame(maxWidth: .infinity, alignment: .leading)
             .clipped()
         }
+        .frame(height: 46) // 高さを明示して VStack のレイアウトを安定させる
     }
 
     // MARK: - Main scrollable grid
 
     @State private var scrollProxy: ScrollViewProxy? = nil
 
-    private func mainGrid(colW: CGFloat) -> some View {
+    private var mainGrid: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 0) {
                     timeColumn
-                    cellStrip(colW: colW)
+                    cellStrip
                 }
                 .padding(.bottom, 44)
             }
             .onAppear {
                 scrollProxy = proxy
-                // proxy が確実に使える次のランループで実行
                 DispatchQueue.main.async {
                     proxy.scrollTo("time-\(max(0, nowSlot - 4))", anchor: .top)
                 }
@@ -150,7 +147,7 @@ struct TimeGridView: View {
         .frame(width: timeWidth)
     }
 
-    private func cellStrip(colW: CGFloat) -> some View {
+    private var cellStrip: some View {
         ZStack(alignment: .leading) {
             HStack(spacing: 0) {
                 ForEach(bufferDates, id: \.self) { date in
@@ -167,7 +164,6 @@ struct TimeGridView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .clipped()
     }
-
 
     // MARK: - Horizontal drag gesture
 
@@ -194,7 +190,6 @@ struct TimeGridView: View {
                 defer { dragAxis = .undetermined }
                 guard dragAxis == .horizontal else { return }
 
-                // Use predictedEndTranslation for momentum feel
                 let predictedDx = value.predictedEndTranslation.width
                 let finalOffset = dragStartOffset - predictedDx
                 let shift = (finalOffset - homeOffset) / colW
@@ -205,11 +200,9 @@ struct TimeGridView: View {
                     pixelOffset = snappedOffset
                 }
 
-                // Rebuild buffer after animation if shifted far
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                     if rounded != 0 {
                         anchorDayOffset += rounded
-                        // pixelOffset reset to homeOffset via onChange(of: anchorDayOffset)
                     }
                     onVisibleDatesChange(visibleDates)
                 }
@@ -265,8 +258,7 @@ private struct DayHeaderCell: View {
                     )
             }
         }
-        .frame(width: colW)
-        .padding(.vertical, 4)
+        .frame(width: colW, height: 38)
     }
 }
 
