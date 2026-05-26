@@ -53,38 +53,35 @@ struct TimeGridView: View {
     }
 
     var body: some View {
-        // GeometryReader をレイアウトに使わず、VStack を直接配置する
-        // これにより dayHeaderStrip が必ずヘッダー直下に来る
-        VStack(spacing: 0) {
-            dayHeaderStrip
-            Divider().background(Color(white: 0.13))
-            mainGrid
-        }
-        // background(GeometryReader) でレイアウトに影響せず幅だけ測定する。
-        // onGeometryChange はアニメーション中に 0 で発火するケースがあるため使わない。
-        .background(
-            GeometryReader { geo in
-                Color.clear.onAppear {
-                    let w = geo.size.width
-                    guard w > timeWidth else { return }
-                    let newColW = (w - timeWidth) / CGFloat(visibleCount)
-                    guard newColW > 0 else { return }
-                    colW = newColW
-                    pixelOffset = homeOffset
-                    todayStr = store.dateString(Date())
-                    onVisibleDatesChange(visibleDates)
-                }
+        // GeometryReader を最外層に置き、geo.size.width を onAppear で確実に取得する。
+        // background(GeometryReader) だと VStack が正しい幅を持つ前に計測される場合があるため、
+        // GeometryReader 自体を最外層にして ContentView から正確な幅を受け取る。
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                dayHeaderStrip
+                Divider().background(Color(white: 0.13))
+                mainGrid
             }
-        )
-        .onChange(of: anchorDayOffset) {
-            pixelOffset = homeOffset
-            onVisibleDatesChange(visibleDates)
+            .onAppear {
+                let w = geo.size.width
+                guard w > timeWidth else { return }
+                let newColW = (w - timeWidth) / CGFloat(visibleCount)
+                guard newColW > 0 else { return }
+                colW = newColW
+                pixelOffset = homeOffset
+                todayStr = store.dateString(Date())
+                onVisibleDatesChange(visibleDates)
+            }
+            .onChange(of: anchorDayOffset) {
+                pixelOffset = homeOffset
+                onVisibleDatesChange(visibleDates)
+            }
+            .onReceive(minuteTimer) { _ in
+                nowSlot = Self.currentNowSlot()
+                todayStr = store.dateString(Date())
+            }
+            .gesture(horizontalDragGesture)
         }
-        .onReceive(minuteTimer) { _ in
-            nowSlot = Self.currentNowSlot()
-            todayStr = store.dateString(Date())
-        }
-        .gesture(horizontalDragGesture)
     }
 
     // MARK: - Day header strip
