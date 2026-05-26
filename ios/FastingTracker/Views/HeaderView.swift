@@ -9,6 +9,8 @@ struct HeaderView: View {
     let onToday: () -> Void
 
     @State private var showSettings = false
+    @State private var now = Date()
+    private let minuteTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private var fastCount: Int {
         store.countFasts(visibleDates: visibleDates)
@@ -55,7 +57,20 @@ struct HeaderView: View {
                 todayButton
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 6)
+            .padding(.bottom, 4)
+
+            // カウントダウン行（断食中のみ表示）
+            if let label = countdownLabel {
+                HStack(spacing: 5) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text(label)
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(Color(red: 0.0, green: 0.824, blue: 0.706))
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 6)
+            }
         }
         .background(Color(red: 0.051, green: 0.067, blue: 0.090))
         .overlay(alignment: .bottom) {
@@ -63,6 +78,25 @@ struct HeaderView: View {
                 .frame(height: 0.5)
                 .foregroundStyle(Color(white: 0.13))
         }
+        .onReceive(minuteTimer) { now = $0 }
+    }
+
+    // 残り時間ラベル。断食中でなければ nil を返す
+    private var countdownLabel: String? {
+        guard let lastMeal = store.lastMealDate else { return nil }
+        let elapsed = now.timeIntervalSince(lastMeal)
+        let target = TimeInterval(store.fastingHours * 3600)
+        let remaining = target - elapsed
+        guard remaining > 0 else { return nil }
+
+        let totalMin = Int(remaining / 60)
+        let h = totalMin / 60
+        let m = totalMin % 60
+        let timeStr: String
+        if h > 0 && m > 0 { timeStr = "\(h)時間\(m)分" }
+        else if h > 0      { timeStr = "\(h)時間" }
+        else               { timeStr = "\(m)分" }
+        return "あと\(timeStr)でファスト完了"
     }
 
     private var fastBadge: some View {

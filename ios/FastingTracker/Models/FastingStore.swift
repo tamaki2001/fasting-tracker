@@ -83,6 +83,24 @@ final class FastingStore {
         scheduleNotifications(after: date, slot: slot)
     }
 
+    /// 直近の食事/間食が記録された時刻（スロット単位で変換済み）
+    var lastMealDate: Date? {
+        // 全イベントから最新のものを探す
+        var bestDateStr: String = ""
+        var bestSlot: Int = -1
+        for dateStr in dayData.keys {
+            guard let dd = dayData[dateStr] else { continue }
+            for slot in dd.keys {
+                if dateStr > bestDateStr || (dateStr == bestDateStr && slot > bestSlot) {
+                    bestDateStr = dateStr
+                    bestSlot = slot
+                }
+            }
+        }
+        guard bestSlot >= 0, let base = parseDate(bestDateStr) else { return nil }
+        return cal.date(byAdding: .minute, value: bestSlot * 30, to: base)
+    }
+
     func countFasts(visibleDates: [Date]) -> Int {
         let visibleStrings = Set(visibleDates.map { dateString($0) })
         return fastPeriods.filter { period in
