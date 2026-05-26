@@ -96,7 +96,7 @@ struct TimeGridView: View {
             ZStack(alignment: .leading) {
                 HStack(spacing: 0) {
                     ForEach(bufferDates, id: \.self) { date in
-                        DayHeaderCell(date: date, colW: colW, todayStr: todayStr)
+                        DayHeaderCell(date: date, colW: max(1, colW), todayStr: todayStr)
                     }
                 }
                 .offset(x: -pixelOffset)
@@ -158,7 +158,7 @@ struct TimeGridView: View {
                 ForEach(bufferDates, id: \.self) { date in
                     DayColumn(
                         date: date,
-                        colW: colW,
+                        colW: max(1, colW),
                         nowSlot: nowSlot,
                         todayStr: todayStr
                     )
@@ -263,7 +263,7 @@ private struct DayHeaderCell: View {
                     )
             }
         }
-        .frame(width: colW, height: 38)
+        .frame(width: max(1, colW), height: 38)
     }
 }
 
@@ -296,7 +296,7 @@ private struct DayColumn: View {
                     isWeekend: isWeekend,
                     isNow: isToday && slot == nowSlot
                 )
-                .frame(width: colW, height: rowHeight)
+                .frame(width: max(1, colW), height: rowHeight)
                 .contentShape(Rectangle())
                 .onTapGesture { store.toggle(date: date, slot: slot) }
             }
