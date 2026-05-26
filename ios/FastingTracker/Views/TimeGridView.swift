@@ -60,20 +60,22 @@ struct TimeGridView: View {
             Divider().background(Color(white: 0.13))
             mainGrid
         }
-        // 幅の測定は onGeometryChange（iOS 17）で行う（レイアウトに影響しない）
-        .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { newWidth in
-            // 幅が有効な正の値のときだけ更新（0 や負値はスキップ）
-            guard newWidth > timeWidth else { return }
-            let newColW = (newWidth - timeWidth) / CGFloat(visibleCount)
-            guard newColW > 0, abs(newColW - colW) > 0.5 else { return }
-            colW = newColW
-            pixelOffset = homeOffset
-        }
-        .onAppear {
-            pixelOffset = homeOffset
-            todayStr = store.dateString(Date())
-            onVisibleDatesChange(visibleDates)
-        }
+        // background(GeometryReader) でレイアウトに影響せず幅だけ測定する。
+        // onGeometryChange はアニメーション中に 0 で発火するケースがあるため使わない。
+        .background(
+            GeometryReader { geo in
+                Color.clear.onAppear {
+                    let w = geo.size.width
+                    guard w > timeWidth else { return }
+                    let newColW = (w - timeWidth) / CGFloat(visibleCount)
+                    guard newColW > 0 else { return }
+                    colW = newColW
+                    pixelOffset = homeOffset
+                    todayStr = store.dateString(Date())
+                    onVisibleDatesChange(visibleDates)
+                }
+            }
+        )
         .onChange(of: anchorDayOffset) {
             pixelOffset = homeOffset
             onVisibleDatesChange(visibleDates)

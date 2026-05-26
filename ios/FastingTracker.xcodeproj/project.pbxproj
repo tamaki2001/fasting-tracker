@@ -23,7 +23,7 @@
 		7F22199A0932F761BB5A1F59 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8174E197B0C6E9EAFAE065D1 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		8F613A3FCC7F2370762CC31A /* FastingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FastingStore.swift; sourceTree = "<group>"; };
-		A2B6709260FADB761DC04B6F /* FastingTracker.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FastingTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2B6709260FADB761DC04B6F /* FastingTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FastingTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA9844934E60716EE3AF7064 /* LegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegendView.swift; sourceTree = "<group>"; };
 		BFC64968E2BCF1E364723DD7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C23F3F1242D9744DE54CBB7F /* TimeGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeGridView.swift; sourceTree = "<group>"; };
@@ -116,8 +116,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 8BE0B5530C202569D854D4AB /* Build configuration list for PBXProject "FastingTracker" */;
 			developmentRegion = en;
@@ -173,6 +171,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WHK8TQ38KD;
 				INFOPLIST_FILE = FastingTracker/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -312,6 +311,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WHK8TQ38KD;
 				INFOPLIST_FILE = FastingTracker/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
