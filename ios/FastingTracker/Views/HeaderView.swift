@@ -8,6 +8,8 @@ struct HeaderView: View {
     let onNext: () -> Void
     let onToday: () -> Void
 
+    @State private var showSettings = false
+
     private var fastCount: Int {
         store.countFasts(visibleDates: visibleDates)
     }
@@ -30,10 +32,17 @@ struct HeaderView: View {
                     .foregroundStyle(Color(white: 0.90))
                 Spacer()
                 fastBadge
+                settingsButton
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
             .padding(.bottom, 6)
+            .sheet(isPresented: $showSettings) {
+                SettingsSheet()
+                    .environment(store)
+                    .presentationDetents([.height(280)])
+                    .presentationDragIndicator(.visible)
+            }
 
             // Navigation row
             HStack(spacing: 6) {
@@ -81,6 +90,17 @@ struct HeaderView: View {
         )
     }
 
+    private var settingsButton: some View {
+        Button {
+            showSettings = true
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 16))
+                .foregroundStyle(Color(white: 0.54))
+        }
+        .buttonStyle(.plain)
+    }
+
     private func navButton(_ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
@@ -105,5 +125,50 @@ struct HeaderView: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - SettingsSheet
+
+private struct SettingsSheet: View {
+    @Environment(FastingStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+
+    private let hourOptions = [10, 11, 12, 13, 14, 15, 16, 17, 18, 20]
+
+    var body: some View {
+        @Bindable var store = store
+
+        NavigationStack {
+            VStack(spacing: 0) {
+                // 説明テキスト
+                Text("食事と食事の間がこの時間以上あると\n「断食成功」としてカウントされます")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color(white: 0.54))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 16)
+                    .padding(.horizontal, 24)
+
+                // ホイールピッカー
+                Picker("断食目標時間", selection: $store.fastingHours) {
+                    ForEach(hourOptions, id: \.self) { h in
+                        Text("\(h) 時間").tag(h)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(height: 140)
+
+                Spacer()
+            }
+            .navigationTitle("断食の目標時間")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完了") { dismiss() }
+                }
+            }
+            .background(Color(red: 0.09, green: 0.11, blue: 0.14))
+        }
+        .preferredColorScheme(.dark)
     }
 }

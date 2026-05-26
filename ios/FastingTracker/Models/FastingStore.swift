@@ -1,6 +1,12 @@
 import Foundation
 import Observation
 
+private extension Int {
+    func clamped(to range: ClosedRange<Int>) -> Int {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
+}
+
 enum CellState: String, Codable, Equatable {
     case meal
     case snack
@@ -26,10 +32,21 @@ final class FastingStore {
     private(set) var dayData: [String: [Int: CellState]] = [:]
     private(set) var fastSet: Set<String> = []
 
+    /// 断食と判定する最低時間（時間単位）。変更すると即座に再計算される。
+    var fastingHours: Int = 12 {
+        didSet {
+            UserDefaults.standard.set(fastingHours, forKey: "fasting-hours")
+            recomputeFasting()
+        }
+    }
+
     private let storageKey = "fasting-data"
     private let cal = Calendar.current
 
     init() {
+        fastingHours = UserDefaults.standard.integer(forKey: "fasting-hours")
+            .clamped(to: 10...24) // 0 が返ったときのデフォルト
+        if fastingHours == 0 { fastingHours = 12 }
         load()
         recomputeFasting()
     }
@@ -79,7 +96,7 @@ final class FastingStore {
 
     private func recomputeFasting() {
         let slots = 48
-        let threshold = 24  // 12 hours = 24 × 30-min slots
+        let threshold = fastingHours * 2  // 30分スロット単位に変換
 
         var events: [(dateStr: String, slot: Int)] = []
         for dateStr in dayData.keys.sorted() {
@@ -173,7 +190,7 @@ final class FastingStore {
         let key = dateString(date)
         guard dayData[key]?[slot] != nil else { return }
 
-        NotificationManager.shared.scheduleFastingAchievement(from: slotDate)
+        NotificationManager.shared.scheduleFastingAchievement(from: slotDate, hours: fastingHours)
     }
 
     // MARK: - Helpers

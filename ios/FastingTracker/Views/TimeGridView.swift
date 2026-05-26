@@ -64,9 +64,6 @@ struct TimeGridView: View {
                 pixelOffset = homeOffset
                 todayStr = store.dateString(Date())
                 onVisibleDatesChange(visibleDates)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    scrollToCurrentTime()
-                }
             }
             .onChange(of: cw) {
                 colW = cw
@@ -114,7 +111,13 @@ struct TimeGridView: View {
                 }
                 .padding(.bottom, 44)
             }
-            .onAppear { scrollProxy = proxy }
+            .onAppear {
+                scrollProxy = proxy
+                // proxy が確実に使える次のランループで実行
+                DispatchQueue.main.async {
+                    proxy.scrollTo("time-\(max(0, nowSlot - 4))", anchor: .top)
+                }
+            }
             .simultaneousGesture(horizontalDragGesture)
         }
     }
@@ -158,12 +161,6 @@ struct TimeGridView: View {
         .clipped()
     }
 
-    // MARK: - Scroll to current time
-
-    private func scrollToCurrentTime() {
-        let targetSlot = max(0, nowSlot - 4)
-        scrollProxy?.scrollTo("time-\(targetSlot)", anchor: .top)
-    }
 
     // MARK: - Horizontal drag gesture
 
