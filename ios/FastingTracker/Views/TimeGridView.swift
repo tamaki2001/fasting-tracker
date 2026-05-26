@@ -59,6 +59,9 @@ struct TimeGridView: View {
                 Divider().background(Color(white: 0.13))
                 mainGrid(colW: cw)
             }
+            // GeometryReader 内の VStack は明示的にフレームを指定しないと
+            // 自然サイズで配置されてしまい、レイアウトが崩れる
+            .frame(width: geo.size.width, height: geo.size.height)
             .onAppear {
                 colW = cw
                 pixelOffset = homeOffset
@@ -94,6 +97,9 @@ struct TimeGridView: View {
                 }
                 .offset(x: -pixelOffset)
             }
+            // ZStack はデフォルトで内部コンテンツ（21列分）の幅を報告するため
+            // 親レイアウトが崩れる。maxWidth: .infinity で利用可能幅に制限する。
+            .frame(maxWidth: .infinity, alignment: .leading)
             .clipped()
         }
     }
@@ -158,6 +164,7 @@ struct TimeGridView: View {
             }
             .offset(x: -pixelOffset)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .clipped()
     }
 
