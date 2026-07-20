@@ -10,16 +10,16 @@ final class NotificationManager {
         _ = try? await center.requestAuthorization(options: [.alert, .sound])
     }
 
-    // 最後の食事から12時間後に通知を1本だけスケジュール
-    func scheduleFastingAchievement(from mealTime: Date, hours: Int = 12) {
-        center.removePendingNotificationRequests(withIdentifiers: ["fasting-achievement"])
+    // 最後の食事から指定時間後（＝次の食事の期限）に通知を1本だけスケジュール
+    func scheduleNextMealReminder(from mealTime: Date, hours: Int = 6) {
+        center.removePendingNotificationRequests(withIdentifiers: ["next-meal-reminder"])
 
         let fireDate = mealTime.addingTimeInterval(TimeInterval(hours * 3600))
         guard fireDate > Date() else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "断食達成！"
-        content.body = "最後の食事から\(hours)時間が経過しました"
+        content.title = "そろそろ次の食事を"
+        content.body = "最後の食事から\(hours)時間が経ちました"
         content.sound = .default
 
         let comps = Calendar.current.dateComponents(
@@ -27,7 +27,7 @@ final class NotificationManager {
         )
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
         let request = UNNotificationRequest(
-            identifier: "fasting-achievement", content: content, trigger: trigger
+            identifier: "next-meal-reminder", content: content, trigger: trigger
         )
         center.add(request)
     }

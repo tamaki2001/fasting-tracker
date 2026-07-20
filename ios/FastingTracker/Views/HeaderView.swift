@@ -12,8 +12,8 @@ struct HeaderView: View {
     @State private var now = Date()
     private let minuteTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
-    private var fastCount: Int {
-        store.countFasts(visibleDates: visibleDates)
+    private var okCount: Int {
+        store.countOK(visibleDates: visibleDates)
     }
 
     private var weekLabel: String {
@@ -59,7 +59,7 @@ struct HeaderView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 4)
 
-            // カウントダウン行（断食中のみ表示）
+            // カウントダウン行（次の食事の期限が残っている間のみ表示）
             if let label = countdownLabel {
                 HStack(spacing: 5) {
                     Image(systemName: "timer")
@@ -81,11 +81,11 @@ struct HeaderView: View {
         .onReceive(minuteTimer) { now = $0 }
     }
 
-    // 残り時間ラベル。断食中でなければ nil を返す
+    // 次の食事の期限までの残り時間。窓を過ぎていれば nil を返す
     private var countdownLabel: String? {
         guard let lastMeal = store.lastMealDate else { return nil }
         let elapsed = now.timeIntervalSince(lastMeal)
-        let target = TimeInterval(store.fastingHours * 3600)
+        let target = TimeInterval(store.intervalHours * 3600)
         let remaining = target - elapsed
         guard remaining > 0 else { return nil }
 
@@ -96,15 +96,15 @@ struct HeaderView: View {
         if h > 0 && m > 0 { timeStr = "\(h)時間\(m)分" }
         else if h > 0      { timeStr = "\(h)時間" }
         else               { timeStr = "\(m)分" }
-        return "あと\(timeStr)でファスト完了"
+        return "次の食事まであと\(timeStr)"
     }
 
     private var fastBadge: some View {
         HStack(alignment: .lastTextBaseline, spacing: 4) {
-            Text("\(fastCount)")
+            Text("\(okCount)")
                 .font(.system(size: 20, weight: .heavy))
                 .foregroundStyle(Color(red: 0.051, green: 0.067, blue: 0.090))
-            Text("FASTS")
+            Text("OK")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(Color(red: 0.051, green: 0.067, blue: 0.090))
                 .tracking(0.5)
@@ -168,7 +168,7 @@ private struct SettingsSheet: View {
     @Environment(FastingStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    private let hourOptions = Array(10...36)
+    private let hourOptions = Array(2...12)
 
     var body: some View {
         @Bindable var store = store
@@ -176,7 +176,7 @@ private struct SettingsSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // 説明テキスト
-                Text("食事と食事の間がこの時間以上あると\n「断食成功」としてカウントされます")
+                Text("前の食事からこの時間以内に\n次の食事を摂れると「OK」になります")
                     .font(.system(size: 13))
                     .foregroundStyle(Color(white: 0.54))
                     .multilineTextAlignment(.center)
@@ -184,7 +184,7 @@ private struct SettingsSheet: View {
                     .padding(.horizontal, 24)
 
                 // ホイールピッカー
-                Picker("断食目標時間", selection: $store.fastingHours) {
+                Picker("目標間隔", selection: $store.intervalHours) {
                     ForEach(hourOptions, id: \.self) { h in
                         Text("\(h) 時間").tag(h)
                     }
@@ -194,7 +194,7 @@ private struct SettingsSheet: View {
 
                 Spacer()
             }
-            .navigationTitle("断食の目標時間")
+            .navigationTitle("食事間隔の目標")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

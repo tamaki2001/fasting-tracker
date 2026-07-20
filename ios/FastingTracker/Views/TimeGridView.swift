@@ -289,7 +289,7 @@ private struct DayColumn: View {
             ForEach(0..<slots, id: \.self) { slot in
                 CellView(
                     state: store.state(date: date, slot: slot),
-                    isFasting: store.fastSet.contains("\(dateStr):\(slot)"),
+                    isOK: store.okSet.contains("\(dateStr):\(slot)"),
                     isWeekend: isWeekend,
                     isNow: isToday && slot == nowSlot
                 )
@@ -305,7 +305,7 @@ private struct DayColumn: View {
 
 private struct CellView: View {
     let state: CellState?
-    let isFasting: Bool
+    let isOK: Bool
     let isWeekend: Bool
     let isNow: Bool
 
@@ -344,7 +344,7 @@ private struct CellView: View {
                 ? Color(red: 1.0, green: 0.549, blue: 0.259).opacity(0.24)
                 : Color(red: 1.0, green: 0.820, blue: 0.400).opacity(0.20)
         }
-        if isFasting { return Color(red: 0.0, green: 0.824, blue: 0.706).opacity(0.13) }
+        if isOK { return Color(red: 0.0, green: 0.824, blue: 0.706).opacity(0.13) }
         if isWeekend { return Color.white.opacity(0.018) }
         return Color.clear
     }

@@ -30,13 +30,15 @@ enum CellState: String, Codable, Equatable {
 final class FastingStore {
     // dayData["2024-01-15"][26] = .meal  (slot 26 = 13:00)
     private(set) var dayData: [String: [Int: CellState]] = [:]
-    private(set) var fastSet: Set<String> = []
+    // OK と判定された空白セル ("2024-01-15:27" 形式)
+    private(set) var okSet: Set<String> = []
 
-    /// 断食と判定する最低時間（時間単位）。変更すると即座に再計算される。
-    var fastingHours: Int = 12 {
+    /// 目標とする食事間隔（時間単位）。この時間「以内」に次の食事を摂れたら OK。
+    /// 変更すると即座に再計算される。
+    var intervalHours: Int = 6 {
         didSet {
-            UserDefaults.standard.set(fastingHours, forKey: "fasting-hours")
-            recomputeFasting()
+            UserDefaults.standard.set(intervalHours, forKey: "interval-hours")
+            recomputeOK()
         }
     }
 
@@ -44,11 +46,11 @@ final class FastingStore {
     private let cal = Calendar.current
 
     init() {
-        fastingHours = UserDefaults.standard.integer(forKey: "fasting-hours")
-            .clamped(to: 10...36) // 0 が返ったときのデフォルト
-        if fastingHours == 0 { fastingHours = 12 }
+        intervalHours = UserDefaults.standard.integer(forKey: "interval-hours")
+            .clamped(to: 2...12) // 0 が返ったときのデフォルト
+        if intervalHours == 0 { intervalHours = 6 }
         load()
-        recomputeFasting()
+        recomputeOK()
     }
 
     // MARK: - Public API
@@ -79,18 +81,18 @@ final class FastingStore {
         }
 
         save()
-        recomputeFasting()
+        recomputeOK()
         scheduleNotifications(after: date, slot: slot)
     }
 
-    /// 直近の食事/間食が記録された時刻（スロット単位で変換済み）
+    /// 直近の「食事(◯)」が記録された時刻（スロット単位で変換済み）。
+    /// 間食(△)は判定に影響しないため無視する。
     var lastMealDate: Date? {
-        // 全イベントから最新のものを探す
         var bestDateStr: String = ""
         var bestSlot: Int = -1
         for dateStr in dayData.keys {
             guard let dd = dayData[dateStr] else { continue }
-            for slot in dd.keys {
+            for (slot, cell) in dd where cell == .meal {
                 if dateStr > bestDateStr || (dateStr == bestDateStr && slot > bestSlot) {
                     bestDateStr = dateStr
                     bestSlot = slot
@@ -101,35 +103,37 @@ final class FastingStore {
         return cal.date(byAdding: .minute, value: bestSlot * 30, to: base)
     }
 
-    func countFasts(visibleDates: [Date]) -> Int {
+    func countOK(visibleDates: [Date]) -> Int {
         let visibleStrings = Set(visibleDates.map { dateString($0) })
-        return fastPeriods.filter { period in
+        return okPeriods.filter { period in
             period.contains { visibleStrings.contains($0) }
         }.count
     }
 
-    // MARK: - Fasting Calculation
+    // MARK: - OK Calculation
 
-    private var fastPeriods: [Set<String>] = []
+    private var okPeriods: [Set<String>] = []
 
-    private func recomputeFasting() {
+    /// 連続する「食事(◯)」の間隔が目標時間「以内」なら、その間の空白セルを OK として塗る。
+    /// 間食(△)はイベントとして数えず、純粋な記録として無視する。
+    private func recomputeOK() {
         let slots = 48
-        let threshold = fastingHours * 2  // 30分スロット単位に変換
+        let threshold = intervalHours * 2  // 30分スロット単位に変換
 
         var events: [(dateStr: String, slot: Int)] = []
         for dateStr in dayData.keys.sorted() {
             guard let dd = dayData[dateStr] else { continue }
-            for slot in dd.keys.sorted() {
+            for slot in dd.keys.sorted() where dd[slot] == .meal {
                 events.append((dateStr: dateStr, slot: slot))
             }
         }
 
-        var newFastSet = Set<String>()
+        var newOKSet = Set<String>()
         var newPeriods: [Set<String>] = []
 
         guard events.count > 1 else {
-            fastSet = newFastSet
-            fastPeriods = newPeriods
+            okSet = newOKSet
+            okPeriods = newPeriods
             return
         }
 
@@ -142,7 +146,8 @@ final class FastingStore {
 
             let dayDiff = cal.dateComponents([.day], from: dateA, to: dateB).day ?? 0
             let gap = dayDiff * slots + (b.slot - a.slot)
-            guard gap >= threshold else { continue }
+            // 6時間「以内」で次の食事を摂れていれば OK
+            guard gap <= threshold else { continue }
 
             var cd = dateA
             var cs = a.slot + 1
@@ -152,16 +157,18 @@ final class FastingStore {
             while true {
                 let cds = dateString(cd)
                 if cds > b.dateStr || (cds == b.dateStr && cs >= b.slot) { break }
-                newFastSet.insert("\(cds):\(cs)")
+                newOKSet.insert("\(cds):\(cs)")
                 periodDays.insert(cds)
                 cs += 1
                 if cs >= slots { cs = 0; cd = addDays(cd, 1) }
             }
-            if !periodDays.isEmpty { newPeriods.append(periodDays) }
+            // 隣接（間に空白なし）でも 1 本の OK として数える
+            periodDays.insert(a.dateStr)
+            newPeriods.append(periodDays)
         }
 
-        fastSet = newFastSet
-        fastPeriods = newPeriods
+        okSet = newOKSet
+        okPeriods = newPeriods
     }
 
     // MARK: - Persistence
@@ -199,16 +206,16 @@ final class FastingStore {
     // MARK: - Notifications
 
     private func scheduleNotifications(after date: Date, slot: Int) {
+        // 通知は「食事(◯)」を起点にのみスケジュールする。間食(△)や消去では変更しない。
+        let key = dateString(date)
+        guard dayData[key]?[slot] == .meal else { return }
+
         let slotDate = cal.date(
             byAdding: .minute, value: slot * 30,
             to: cal.startOfDay(for: date)
         ) ?? date
 
-        // Only schedule if this is a meal/snack (not a clear)
-        let key = dateString(date)
-        guard dayData[key]?[slot] != nil else { return }
-
-        NotificationManager.shared.scheduleFastingAchievement(from: slotDate, hours: fastingHours)
+        NotificationManager.shared.scheduleNextMealReminder(from: slotDate, hours: intervalHours)
     }
 
     // MARK: - Helpers

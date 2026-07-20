@@ -5,7 +5,7 @@ struct LegendView: View {
         HStack(spacing: 14) {
             legendItem(color: Color(red: 1.0, green: 0.549, blue: 0.259), label: "◯ 食事")
             legendItem(color: Color(red: 1.0, green: 0.820, blue: 0.400), label: "△ 間食")
-            legendItem(color: Color(red: 0.0, green: 0.824, blue: 0.706).opacity(0.5), label: "断食中")
+            legendItem(color: Color(red: 0.0, green: 0.824, blue: 0.706).opacity(0.5), label: "6h以内")
         }
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
