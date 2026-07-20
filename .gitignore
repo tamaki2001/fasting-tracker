@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Xcode - User settings
+**/xcuserdata/
+*.xcuserstate
+
+# Claude Code ローカル設定（シークレット含む可能性）
+.claude/
+
+# 作業用クローン領域
+.clone/
+
+# Build
+build/
+DerivedData/
